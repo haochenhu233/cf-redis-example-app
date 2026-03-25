@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gem 'cf-app-utils'
 gem 'sinatra'
-gem 'redis'
+gem 'redis', '~> 4.5'
 gem 'tttls1.3', '>=0.2.15'
 
 group :test do

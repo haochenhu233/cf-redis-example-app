@@ -50,15 +50,20 @@ get '/config/:item' do
     return
   end
 
-  value = redis_client.config('get', params[:item])
-  if value.length < 2
-    status 404
-    body "config item #{params[:item]} not found"
-    return
-  end
+  begin
+    value = redis_client.config('get', params[:item])
+    if value.length < 2
+      status 404
+      body "config item #{params[:item]} not found"
+      return
+    end
 
-  status 200
-  body value[1]
+    status 200
+    body value[1]
+  rescue Redis::CommandError, NoMethodError => e
+    status 400
+    body "config command not supported in cluster mode: #{e.message}"
+  end
 end
 
 delete '/:key' do
@@ -127,9 +132,20 @@ def redis_client_tls(version='TLSv1')
 end
 
 def redis_client
+    cluster_mode = ENV['cluster_mode'] || false
     tls_enabled = ENV['tls_enabled'] || false
 
-    if tls_enabled
+    if cluster_mode
+      host = redis_credentials.fetch('host')
+      port = redis_credentials.fetch('port')
+      password = redis_credentials.fetch('password')
+
+      @client ||= Redis.new(
+        cluster: ["redis://#{host}:#{port}"],
+        password: password,
+        timeout: 30
+      )
+    elsif tls_enabled
       @client ||= Redis.new(
         host: redis_credentials.fetch('host'),
         port: redis_credentials.fetch('tls_port'),
