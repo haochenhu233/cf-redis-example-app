@@ -1,5 +1,10 @@
 require 'sinatra'
 require 'redis'
+begin
+  require 'redis-clustering'
+rescue LoadError
+  # redis-clustering not available, cluster mode won't work
+end
 require 'cf-app-utils'
 require_relative 'redis_tls'
 
@@ -140,8 +145,8 @@ def redis_client
       port = redis_credentials.fetch('port')
       password = redis_credentials.fetch('password')
 
-      @client ||= Redis.new(
-        cluster: ["redis://#{host}:#{port}"],
+      @client ||= Redis::Cluster.new(
+        nodes: ["redis://#{host}:#{port}"],
         password: password,
         timeout: 30
       )
